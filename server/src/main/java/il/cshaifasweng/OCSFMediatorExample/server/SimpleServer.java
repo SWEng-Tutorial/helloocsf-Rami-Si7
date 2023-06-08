@@ -1,111 +1,189 @@
 package il.cshaifasweng.OCSFMediatorExample.server;
-
 import il.cshaifasweng.OCSFMediatorExample.entities.Message;
+import il.cshaifasweng.OCSFMediatorExample.entities.Student;
+import il.cshaifasweng.OCSFMediatorExample.entities.User;
 import il.cshaifasweng.OCSFMediatorExample.server.ocsf.AbstractServer;
 import il.cshaifasweng.OCSFMediatorExample.server.ocsf.ConnectionToClient;
-import il.cshaifasweng.OCSFMediatorExample.server.ocsf.SubscribedClient;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.Configuration;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.List;
 
 public class SimpleServer extends AbstractServer {
-	private static ArrayList<SubscribedClient> SubscribersList = new ArrayList<>();
+
+	private static final SessionFactory sessionFactory = getSessionFactory();
+	private static Session session;
 
 	public SimpleServer(int port) {
 		super(port);
-		
 	}
 
 	@Override
-	protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
+	public void handleMessageFromClient(Object msg, ConnectionToClient client) throws IOException {
+
+		System.out.println("gggggg");
 		Message message = (Message) msg;
-		String request = message.getMessage();
-		try {
-			//we got an empty message, so we will send back an error message with the error details.
-			if (request.isBlank()){
-				message.setMessage("Error! we got an empty message");
-				client.sendToClient(message);
-			}
-			//we got a request to change submitters IDs with the updated IDs at the end of the string, so we save
-			// the IDs at data field in Message entity and send back to all subscribed clients a request to update
-			//their IDs text fields. An example of use of observer design pattern.
-			//message format: "change submitters IDs: 123456789, 987654321"
-			else if(request.startsWith("change submitters IDs:")){
-				message.setData(request.substring(23));
-				message.setMessage("update submitters IDs");
-				sendToAllClients(message);
-			}
-			//we got a request to add a new client as a subscriber.
-			else if (request.equals("add client")){
-				SubscribedClient connection = new SubscribedClient(client);
-				SubscribersList.add(connection);
-				message.setMessage("client added successfully");
-				client.sendToClient(message);
-			}
-			//we got a message from client requesting to echo Hello, so we will send back to client Hello world!
-			else if(request.startsWith("echo Hello")){
-				message.setMessage("Hello World!");
-				client.sendToClient(message);
-			}
-			else if(request.startsWith("send Submitters IDs"))
-			{
-				message.setMessage("212272751, 314659756");
-				client.sendToClient(message);
-				//add code here to send submitters IDs to client
-			}
-			else if (request.startsWith("send Submitters"))
-			{
-				message.setMessage("Rami Sima'an, Yazan Yehya");
-				client.sendToClient(message);
-			}
-			else if (request.equals("what's the time?")) {
+		if ("Get all Students".equals(message.getOperation())) {
+			try {
+				session = sessionFactory.openSession();
+				session.beginTransaction();
 
-				LocalDateTime format = message.getTimeStamp();
-				DateTimeFormatter date = DateTimeFormatter.ofPattern("HH:mm:ss");
-				message.setMessage(format.format(date));
-				client.sendToClient(message);
-				//add code here to send the time to client
+// Fetch the student data from your data source or database
+				List<Student> students = getAllStudentsFromDatabase();
+
+// Create a new Message with the student data and send it back to the client
+				int msgId = 0;
+				Message responseMessage = new Message("Get all Students", students);
+				client.sendToClient(responseMessage);
+				session.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			else if (request.startsWith("multiply"))
-			{
-				String s = message.getMessage();
-				String[] str = s.substring(9).split("\\*");
-				int n = Integer.parseInt(str[0].trim());
-				int m = Integer.parseInt(str[1].trim());
-				s = Integer.toString(n*m);
-				message.setMessage(s);
-				client.sendToClient(message);
-				//add code here to multiply 2 numbers received in the message and send result back to client
-				//(use substring method as shown above)
-				//message format: "multiply n*m"
-			}else{
-				client.sendToClient(message);
-				//add code here to send received message to all clients.
-				//The string we received in the message is the message we will send back to all clients subscribed.
-				//Example:
-					// message received: "Good morning"
-					// message sent: "Good morning"
-				//see code for changing submitters IDs for help
+		} else if ("get grades".equals(message.getOperation())) {
+			try {
+				session = sessionFactory.openSession();
+				session.beginTransaction();
+				Student studentsel = (Student) message.getMessage();
+				int studentId = studentsel.getId();
+				Student student = getStudentFromDatabase(studentId);
+				Message responseMessage = new Message("get grades", student);
+				client.sendToClient(responseMessage);
+				session.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-		} catch (IOException e1) {
-			e1.printStackTrace();
+		}else if("update".equals(message.getOperation())){
+			try {
+
+				session = sessionFactory.openSession();
+				session.beginTransaction();
+				Student studentsel =(Student) message.getMessage();
+				int studentId = studentsel.getId();
+				Student student = updateStudentGradeInDatabase(studentId,message.getSubject(), message.getNewScore());
+				Message responseMessage = new Message("update",student);
+				client.sendToClient(responseMessage);
+
+				session.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
-	}
-	public static String baseConversion(String number, int sBase, int dBase)
+		else if ("Login".equals(message.getOperation())) {
+			String username = message.getUsername();
+			String password = message.getPassword();
+
+			User user = loginUser(username, password);
+
+			if (user != null) {
+				// Username and password are correct
+				// Send a success response to the client
+				Message responseMessage = new Message("LoginSuccess", null);
+				client.sendToClient(responseMessage);
+			} else {
+				// Username and password are incorrect
+				// Send an error response to the client
+				Message responseMessage = new Message("LoginError", null);
+				client.sendToClient(responseMessage);
+			}
+		}
+		}
+
+
+	public static SessionFactory getSessionFactory()
 	{
-		return Integer.toString(
-				Integer.parseInt(number, sBase), dBase).toUpperCase();
+		Configuration configuration = new Configuration();
+		configuration.addAnnotatedClass(Student.class);
+		StandardServiceRegistry serviceRegistry= new StandardServiceRegistryBuilder()
+				.applySettings(configuration.getProperties()).build();
+
+		return configuration.buildSessionFactory(serviceRegistry);
 	}
-	public void sendToAllClients(Message message) {
+	public User loginUser(String username, String password) {
+		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("yourPersistenceUnitName");
+		EntityManager entityManager = entityManagerFactory.createEntityManager();
+
 		try {
-			for (SubscribedClient SubscribedClient : SubscribersList) {
-				SubscribedClient.getClient().sendToClient(message);
+			TypedQuery<User> query = entityManager.createQuery("SELECT u FROM User u WHERE u.username = :userame AND u.password = :password", User.class);
+			query.setParameter("username", username);
+			query.setParameter("password", password);
+
+			List<User> users = query.getResultList();
+			if (!users.isEmpty()) {
+				return users.get(0);
+			} else {
+				return null;
 			}
-		} catch (IOException e1) {
-			e1.printStackTrace();
+		} finally {
+			entityManager.close();
+			entityManagerFactory.close();
 		}
 	}
+	public static List<Student> getAllStudentsFromDatabase() {
+		Session session = sessionFactory.openSession();
+//open hibernate session
+		session.beginTransaction();
+//create criteria builder and criteria query objects to build query
+		CriteriaBuilder builder = session.getCriteriaBuilder();
+		CriteriaQuery<Student> query = builder.createQuery(Student.class);
+		Root<Student> root = query.from(Student.class);
+		query.select(root);
+//execute query and retrieve all students
+		List<Student> students = session.createQuery(query).getResultList();
+//close transaction and session
+		session.getTransaction().commit();
+		session.close();
 
+		return students;
+	}
+	public  static Student getStudentFromDatabase(int studentId){
+		Session session = sessionFactory.openSession();
+		session.beginTransaction();
+		CriteriaBuilder builder = session.getCriteriaBuilder();
+		CriteriaQuery<Student> query = builder.createQuery(Student.class);
+		Root<Student> root = query.from(Student.class);
+		query.select(root).where(builder.equal(root.get("id"),studentId));
+		Student student = session.createQuery(query).uniqueResult();
+		session.getTransaction().commit();
+		session.close();
+		return student;
+	}
+	public static Student updateStudentGradeInDatabase(int studentId, String subject , int newGrade) {
+			Session session = sessionFactory.openSession();
+			 session.beginTransaction();
+
+			 Student student = session.get(Student.class, studentId);
+			 if (student != null)
+			 {
+			 	if(subject.equals("English"))
+				 {
+
+				 }
+				 else if(subject.equals("Math"))
+				 {
+						//student.setMathScore(newGrade);
+				 }
+				 session.update(student);
+				 session.getTransaction().commit();
+
+			 }
+			 session.close();
+		return student;
+	}
 }

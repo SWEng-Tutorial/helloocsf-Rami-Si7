@@ -1,63 +1,84 @@
 package il.cshaifasweng.OCSFMediatorExample.entities;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 public class Message implements Serializable {
-    int id;
-    LocalDateTime timeStamp;
-    String message;
-    String data;
+    String operation;
+    Object message;
+    int studentId;
+    String subject;
+    int newScore;
+    String username;
+    String password;
 
-    public Message(int id, LocalDateTime timeStamp, String message) {
-        this.id = id;
-        this.timeStamp = timeStamp;
+    public Message(String operation, Object message) {
+        this.operation = operation;
         this.message = message;
+
     }
 
-    public Message(int id, String message) {
-        this.id = id;
-        this.timeStamp = LocalDateTime.now();
-        this.message = message;
-        this.data = null;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    public Message(int id, String message,String data) {
-        this.id = id;
-        this.timeStamp = LocalDateTime.now();
-        this.message = message;
-        this.data = data;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public int getId() {
-        return id;
+    public String getUsername() {
+        return username;
     }
 
-    public LocalDateTime getTimeStamp() {
-        return timeStamp;
+    public String getPassword() {
+        return password;
     }
 
-    public String getMessage() {
+
+    public String getOperation() {
+        return operation;
+    }
+
+
+    public Object getMessage() {
         return message;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public int getStudentId() {
+        return studentId;
     }
 
-    public void setTimeStamp(LocalDateTime timeStamp) {
-        this.timeStamp = timeStamp;
+    public String getSubject() {
+        return subject;
+    }
+     public int getNewScore(){
+        return newScore;
+     }
+    public void setOperation(String operation) {
+        this.operation = operation;
     }
 
-    public void setMessage(String message) {
+
+    public void setMessage(Object message) {
         this.message = message;
     }
-
-    public String getData() {
-        return data;
+    public void setStudentId(int studentId) {
+        this.studentId = studentId;
     }
 
-    public void setData(String data) {
-        this.data = data;
+    public void setNewScore(int newScore) {
+        this.newScore = newScore;
+    }
+
+    public void setSubject(String subject){
+        this.subject = subject;
+    }
+
+    public String getAction() {
+        if(message instanceof String){
+            return (String) message;
+        }
+        else {
+            return null;
+        }
     }
 }

@@ -5,28 +5,30 @@ import org.greenrobot.eventbus.EventBus;
 
 import il.cshaifasweng.OCSFMediatorExample.client.ocsf.AbstractClient;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+
 public class SimpleClient extends AbstractClient {
 	
 	private static SimpleClient client = null;
+	private Socket clientSocket;
+	private ObjectOutputStream outputStream;
+	private SimpleClient(String localhost, int port) {
+		super(port);
+		try {
+			clientSocket = new Socket("localhost", 3000);
+			outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
 
-	private SimpleClient(String host, int port) {
-		super(host, port);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	protected void handleMessageFromServer(Object msg) {
-		Message message = (Message) msg;
-		if(message.getMessage().equals("update submitters IDs")){
-			EventBus.getDefault().post(new UpdateMessageEvent(message));
-		}else if(message.getMessage().equals("client added successfully")){
-			EventBus.getDefault().post(new NewSubscriberEvent(message));
-		}else if(message.getMessage().equals("Error! we got an empty message")){
-			EventBus.getDefault().post(new ErrorEvent(message));
-		}else {
-			EventBus.getDefault().post(new MessageEvent(message));
-		}
+		EventBus.getDefault().post(msg);
 	}
-	
 	public static SimpleClient getClient() {
 		if (client == null) {
 			client = new SimpleClient("localhost", 3000);

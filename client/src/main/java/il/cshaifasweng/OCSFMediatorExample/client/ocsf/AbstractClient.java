@@ -4,11 +4,8 @@
 
 package il.cshaifasweng.OCSFMediatorExample.client.ocsf;
 
-import il.cshaifasweng.OCSFMediatorExample.entities.Message;
-
 import java.io.*;
 import java.net.*;
-import java.util.*;
 
 /**
 * The <code> AbstractClient </code> contains all the
@@ -69,12 +66,12 @@ public abstract class AbstractClient implements Runnable
   * of communication between two processes.
   * @see java.net.Socket
   */
-  private Socket clientSocket;
+  private static Socket clientSocket;
 
   /**
   * The stream to handle data going to the server.
   */
-  private ObjectOutputStream output;
+  private static ObjectOutputStream output;
 
   /**
   * The stream to handle data from the server.
@@ -108,10 +105,9 @@ public abstract class AbstractClient implements Runnable
   /**
    * Constructs the client.
    *
-   * @param  host  the server's host name.
    * @param  port  the port number.
    */
-  public AbstractClient(String host, int port)
+  public AbstractClient(int port)
   {
     // Initialize variables
     this.host = host;
@@ -168,8 +164,9 @@ public abstract class AbstractClient implements Runnable
    * @param msg   The message to be sent.
    * @exception IOException if an I/O error occurs when sending
    */
-  public void sendToServer(Object msg) throws IOException
+  public static void sendToServer(Object msg) throws IOException
   {
+
     if (clientSocket == null || output == null) {
       throw new SocketException("socket does not exist");
     }
@@ -196,7 +193,7 @@ public abstract class AbstractClient implements Runnable
   /**
    * @return true if the client is connnected.
    */
-  final public boolean isConnected()
+   final public boolean isConnected()
   {
     return clientReader!=null && clientReader.isAlive();
   }
